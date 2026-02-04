@@ -56,9 +56,8 @@ extra-doc-files:    CHANGELOG.md
 
 common warnings
     ghc-options:
-        -O1
+        -O2
         -optl-s
-        -optl-Wl,--gc-sections
         -optl-Wl,--strip-all
         -fPIC
 
