@@ -1,0 +1,99 @@
+name: Cross Platform Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: ${{ matrix.os }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            arch: x86_64
+            ext: ""
+          # macOS Apple Silicon  
+          - os: macos-latest
+            arch: arm64
+            ext: ""
+          # Windows
+          - os: windows-latest
+            arch: x86_64
+            ext: ".exe"
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    # 安装 GHC 和 Cabal
+    - name: Setup Haskell
+      uses: haskell-actions/setup@v2
+      with:
+        ghc-version: '9.6.7'
+        cabal-version: '3.12'
+    
+    # 缓存依赖加速构建
+    - name: Cache Cabal
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cabal/store
+          dist-newstyle
+        key: ${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/*.cabal') }}
+    
+    # 配置静态链接（Linux）
+    - name: Configure Static Build (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y musl-tools
+        echo "GHC_MUSL=1" >> $GITHUB_ENV
+    
+    # 构建
+    - name: Build
+      run: |
+        cabal update
+        cabal build --enable-executable-stripping --disable-debug-info -j2
+        
+    # 提取可执行文件路径
+    - name: Find Executable
+      id: exe
+      shell: bash
+      run: |
+        EXE_PATH=$(cabal list-bin quickjump)
+        echo "path=$EXE_PATH" >> $GITHUB_OUTPUT
+    
+    # 重命名为标准格式
+    - name: Rename Artifact
+      shell: bash
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        cp "${{ steps.exe.outputs.path }}" ./quickjump-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+    
+    # 上传产物
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: quickjump-${{ matrix.os }}-${{ matrix.arch }}
+        path: quickjump-*-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+
+  # 创建 Release
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+        merge-multiple: true
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./artifacts/*
+        generate_release_notes: true

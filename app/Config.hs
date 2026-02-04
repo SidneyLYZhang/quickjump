@@ -14,16 +14,11 @@ module Config
   ) where
 
 import           Control.Exception    (catch, throwIO)
-import           Control.Monad        (unless, when)
-import           Data.Aeson           (eitherDecode, encode)
+import           Data.Aeson           (eitherDecode)
 import           Data.Aeson.Encode.Pretty (encodePretty)
-import           Data.Bifunctor       (first)
 import           Data.List            (sortOn)
-import           Data.Map             (Map)
 import qualified Data.Map             as M
-import           Data.Maybe           (fromMaybe)
 import           Data.Text            (Text)
-import qualified Data.Text            as T
 import qualified Data.ByteString.Lazy as BL
 import           System.Directory     (createDirectoryIfMissing, doesFileExist,
                                        getHomeDirectory)

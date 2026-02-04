@@ -22,15 +22,10 @@
 ### 使用 Cabal
 
 ```bash
+git clone https://git.lyz.one/sidneyzhang/quickjump.git
+cd quickjump
 cabal build
 cabal install
-```
-
-### 使用 Stack
-
-```bash
-stack build
-stack install
 ```
 
 ## 配置 Shell 集成

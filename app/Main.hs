@@ -2,11 +2,8 @@
 
 module Main where
 
--- import           Data.Text            (Text)
--- import qualified Data.Text            as T
 import           Options.Applicative
 import           System.Environment   (getArgs, withArgs)
--- import           System.IO            (hPutStrLn, stderr)
 
 import           Commands
 import           Types
