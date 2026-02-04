@@ -29,6 +29,42 @@ cabal build
 cabal install
 ```
 
+### 使用 Makefile
+
+项目提供了 Makefile 来简化构建和压缩过程：
+
+```bash
+git clone https://git.lyz.one/sidneyzhang/quickjump.git
+cd quickjump
+
+# 构建并压缩（推荐）
+make
+
+# 或者分步执行
+make build    # 仅构建
+make compress # 压缩可执行文件
+make install  # 安装
+```
+
+### 关于 UPX 压缩
+
+Makefile 的 `compress` 目标会使用 UPX（Ultimate Packer for eXecutables）来压缩可执行文件，显著减小文件体积：
+
+- 如果系统已安装 UPX，直接使用本地 UPX 进行压缩
+- 如果系统未安装 UPX，会自动使用 `npx` 下载并运行最新版本的 UPX
+
+UPX 压缩参数：
+- `--best`：使用最佳压缩级别
+- `--lzma`：使用 LZMA 算法（压缩率更高）
+
+**注意**：使用 `npx` 运行 UPX 需要 Node.js 和 npm 环境。如果不想使用 UPX 压缩，可以直接运行 `make build` 或 `cabal build`。
+
+查看所有可用的 Makefile 目标：
+
+```bash
+make help
+```
+
 ## 配置 Shell 集成
 
 ### Linux/macOS (Bash/Zsh)

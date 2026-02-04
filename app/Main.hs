@@ -35,7 +35,7 @@ quietOption = switch
 
 -- | 版本选项
 versionOption :: Parser (a -> a)
-versionOption = infoOption "quickjump 0.3.0.1"
+versionOption = infoOption "quickjump 0.3.0.2"
   ( long "version"
   <> short 'v'
   <> help "Show version information" )

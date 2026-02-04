@@ -57,6 +57,34 @@ jobs:
       run: |
         cabal update
         cabal build --enable-executable-stripping --disable-debug-info -j2
+    
+    # 安装 UPX
+    - name: Install UPX
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          wget https://github.com/upx/upx/releases/download/v5.1.0/upx-5.1.0-amd64_linux.tar.xz
+          tar -xf upx-5.1.0-amd64_linux.tar.xz
+          sudo mv upx-5.1.0-amd64_linux/upx /usr/local/bin/
+          rm -rf upx-5.1.0-amd64_linux*
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          wget https://github.com/upx/upx/releases/download/v5.1.0/upx-5.1.0-arm64_macos.tar.xz
+          tar -xf upx-5.1.0-arm64_macos.tar.xz
+          sudo mv upx-5.1.0-arm64_macos/upx /usr/local/bin/
+          rm -rf upx-5.1.0-arm64_macos*
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+          curl -L -o upx.zip https://github.com/upx/upx/releases/download/v5.1.0/upx-5.1.0-win64.zip
+          unzip -o upx.zip
+          echo "$PWD/upx-5.1.0-win64" >> $GITHUB_PATH
+          rm upx.zip
+        fi
+    
+    # 使用 UPX 压缩可执行文件
+    - name: Compress with UPX
+      shell: bash
+      run: |
+        EXE_PATH=$(cabal list-bin quickjump)
+        upx --best --lzma "$EXE_PATH"
         
     # 提取可执行文件路径
     - name: Find Executable
