@@ -13,9 +13,10 @@
 - **静默模式** - 抑制输出消息，适合脚本使用
 - **跨平台支持** - 支持 Windows、macOS 和 Linux
 
-## 版本
+## 源码
 
-当前版本: **0.3.0.1**
+- [Github](https://github.com/sidneylyzhang/quickjump)
+- [Gitea](https://git.lyz.one/sidneyzhang/quickjump)
 
 ## 安装
 

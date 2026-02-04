@@ -34,7 +34,7 @@ getConfigPath = do
   -- 首先检查环境变量
   mEnvPath <- lookupEnv "QUICKJUMP_CONFIG"
   case mEnvPath of
-    Just path -> return path
+    Just configPath -> return configPath
     Nothing   -> do
       -- 默认使用 XDG 配置目录
       xdgConfig <- lookupEnv "XDG_CONFIG_HOME"
@@ -47,19 +47,19 @@ getConfigPath = do
 
 -- | 展开路径中的 ~ 和环境变量
 expandPath :: FilePath -> IO FilePath
-expandPath path = do
+expandPath inputPath = do
   -- 首先处理 ~ 展开
-  expanded1 <- if take 1 path == "~"
+  expanded1 <- if take 1 inputPath == "~"
     then do
       home <- getHomeDirectory
-      return $ home </> drop 2 path
-    else return path
+      return $ home </> drop 2 inputPath
+    else return inputPath
   -- 然后处理环境变量（支持 Unix $VAR 和 Windows %VAR% 格式）
   expandEnvVars expanded1
 
 -- | 展开环境变量
 expandEnvVars :: FilePath -> IO FilePath
-expandEnvVars path = do
+expandEnvVars inputPath = do
   -- 处理 Unix 风格的环境变量 $VAR
   let expandUnixVars s = case s of
         '$':'{':rest -> 
@@ -92,9 +92,9 @@ expandEnvVars path = do
         c:cs -> (c:) <$> expandEnvVars cs
         [] -> return []
   -- 根据操作系统选择展开方式
-  if '%' `elem` path
-    then expandWindowsVars path
-    else expandUnixVars path
+  if '%' `elem` inputPath
+    then expandWindowsVars inputPath
+    else expandUnixVars inputPath
   where
     isAlphaNum c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 
@@ -119,8 +119,8 @@ loadConfig = do
 
 -- | 从指定路径加载配置
 loadConfigFrom :: FilePath -> IO Config
-loadConfigFrom path = do
-  expanded <- expandPath path
+loadConfigFrom configPath = do
+  expanded <- expandPath configPath
   result <- catch
     (Right <$> BL.readFile expanded)
     (\e -> if isDoesNotExistError e
@@ -141,8 +141,8 @@ saveConfig cfg = do
 
 -- | 保存配置到指定路径
 saveConfigTo :: FilePath -> Config -> IO ()
-saveConfigTo path cfg = do
-  expanded <- expandPath path
+saveConfigTo configPath cfg = do
+  expanded <- expandPath configPath
   createDirectoryIfMissing True (takeDirectory expanded)
   BL.writeFile expanded (encodePretty cfg)
 

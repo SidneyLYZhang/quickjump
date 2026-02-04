@@ -8,20 +8,17 @@ module Commands
   , printShellIntegration
   ) where
 
-import           Control.Monad        (forM_, unless, when)
+import           Control.Monad        (forM_, unless)
 import           Data.List            (intercalate)
-import           Data.Map             (Map)
 import qualified Data.Map             as M
-import           Data.Maybe           (fromMaybe, isJust)
+import           Data.Maybe           (fromMaybe)
 import           Data.Text            (Text)
 import qualified Data.Text            as T
-import           System.Directory     (doesDirectoryExist, doesFileExist)
-import           System.Environment   (lookupEnv)
-import           System.Exit          (exitFailure, exitSuccess)
-import           System.FilePath      ((</>))
+import           System.Directory     (doesDirectoryExist)
+import           System.Exit          (exitFailure)
 import           System.Info          (os)
 import           System.IO            (hFlush, stdout)
-import           System.Process       (callCommand, spawnCommand, waitForProcess)
+import           System.Process       (spawnCommand, waitForProcess)
 
 import           Config
 import           Types
@@ -135,18 +132,18 @@ openPath p cfg quiet = do
   -- 尝试使用配置的文件管理器，或者自动检测
   let fm = fileManager cfg
   case fm of
-    Just cmd -> runFileManager cmd expanded quiet
+    Just cmd -> runFileManager cmd expanded
     Nothing  -> autoDetectAndOpen expanded quiet
 
 -- | 自动检测并打开文件管理器
 autoDetectAndOpen :: FilePath -> Bool -> IO ()
-autoDetectAndOpen path quiet = do
+autoDetectAndOpen targetPath quiet = do
   let (cmd, args) = case os of
-        "darwin"  -> ("open", [path])
-        "mingw32" -> ("explorer", [path])
-        "mingw64" -> ("explorer", [path])
-        "cygwin"  -> ("cygstart", [path])
-        _         -> ("xdg-open", [path])  -- Linux and others
+        "darwin"  -> ("open", [targetPath])
+        "mingw32" -> ("explorer", [targetPath])
+        "mingw64" -> ("explorer", [targetPath])
+        "cygwin"  -> ("cygstart", [targetPath])
+        _         -> ("xdg-open", [targetPath])  -- Linux and others
 
   -- 检查命令是否存在
   exists <- commandExists cmd
@@ -159,12 +156,12 @@ autoDetectAndOpen path quiet = do
         putStrLn $ "Cannot open file manager. Please configure one:"
         putStrLn $ "  quickjump config set-file-manager <command>"
         -- 输出 cd 命令作为备选
-        putStrLn $ "cd " ++ show path
+        putStrLn $ "cd " ++ show targetPath
 
 -- | 运行文件管理器
-runFileManager :: FilePath -> FilePath -> Bool -> IO ()
-runFileManager cmd path quiet = do
-  expanded <- expandPath path
+runFileManager :: FilePath -> FilePath -> IO ()
+runFileManager cmd targetPath = do
+  expanded <- expandPath targetPath
   let fullCmd = cmd ++ " " ++ show expanded
   _ <- spawnCommand fullCmd >>= waitForProcess
   return ()
@@ -174,19 +171,19 @@ runConfigCmd :: ConfigAction -> Bool -> IO ()
 runConfigCmd action quiet = do
   cfg <- ensureConfigExists
   case action of
-    ConfigAdd name path mDesc -> do
-      expanded <- expandPath path
+    ConfigAdd name targetPath mDesc -> do
+      expanded <- expandPath targetPath
       exists <- doesDirectoryExist expanded
       unless exists $ do
         unless quiet $ putStrLn $ "Warning: Directory does not exist: " ++ expanded
       let entry = JumpEntry
-            { path = path
+            { path = targetPath
             , description = mDesc
             , priority = 100
             }
           newCfg = cfg { entries = M.insert name entry (entries cfg) }
       saveConfig newCfg
-      unless quiet $ putStrLn $ "Added '" ++ T.unpack name ++ "' -> " ++ path
+      unless quiet $ putStrLn $ "Added '" ++ T.unpack name ++ "' -> " ++ targetPath
 
     ConfigRemove name -> do
       if M.member name (entries cfg)
@@ -212,14 +209,14 @@ runConfigCmd action quiet = do
                       ++ " -> " ++ padRight 30 (path entry)
                       ++ if T.null desc then "" else " # " ++ T.unpack desc
 
-    ConfigSetDefault path -> do
-      expanded <- expandPath path
+    ConfigSetDefault targetPath -> do
+      expanded <- expandPath targetPath
       exists <- doesDirectoryExist expanded
       unless exists $ do
         unless quiet $ putStrLn $ "Warning: Directory does not exist: " ++ expanded
-      let newCfg = cfg { defaultPath = Just path }
+      let newCfg = cfg { defaultPath = Just targetPath }
       saveConfig newCfg
-      unless quiet $ putStrLn $ "Set default path to: " ++ path
+      unless quiet $ putStrLn $ "Set default path to: " ++ targetPath
 
     ConfigSetEditor cmd -> do
       let newCfg = cfg { editor = Just cmd }
@@ -231,12 +228,12 @@ runConfigCmd action quiet = do
       saveConfig newCfg
       unless quiet $ putStrLn $ "Set file manager to: " ++ cmd
 
-    ConfigExport path -> do
-      saveConfigTo path cfg
-      unless quiet $ putStrLn $ "Config exported to: " ++ path
+    ConfigExport targetPath -> do
+      saveConfigTo targetPath cfg
+      unless quiet $ putStrLn $ "Config exported to: " ++ targetPath
 
-    ConfigImport path merge -> do
-      imported <- loadConfigFrom path
+    ConfigImport targetPath merge -> do
+      imported <- loadConfigFrom targetPath
       let merged = mergeConfigs cfg imported merge
       saveConfig merged
       unless quiet $
